@@ -2,20 +2,15 @@
 
 set -e
 
-# Default mirror
+# Default mirror and chroot directory
 MIRROR="http://us.mirror.archlinuxarm.org/armv7h/core/"
-
-# Override mirror with ARCHMIRROR env var
-[ -n "$ARCHMIRROR" ] && MIRROR="$ARCHMIRROR"
-
-# The chroot directory defaults to "arch"
 DIR="arch"
 
-# Chroot directory can be overridden by ARCHROOT env var
+# Environment variable overrides
+[ -n "$ARCHMIRROR" ] && MIRROR="$ARCHMIRROR"
 [ -n "$ARCHROOT" ] && DIR="$ARCHROOT"
 
 DIRPATH="/usr/local/chroots/$DIR"
-
 mkdir -p "$DIRPATH"
 cd "$DIRPATH"
 
