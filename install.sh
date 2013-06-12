@@ -28,8 +28,7 @@ PACKAGES="
   coreutils
   curl
   expat
-  file
-  gawk
+  filesystem
   gcc-libs
   glibc
   gpgme
@@ -45,7 +44,6 @@ PACKAGES="
   pacman-mirrorlist
   pcre
   readline
-  systemd
   tar
   xz
   zlib
@@ -54,16 +52,21 @@ PACKAGES="
 # Grab index of packages, reversing so we'll get latest version with first match
 INDEX=`curl -s $MIRROR | tac`
 
+PACMAN_CACHE=var/cache/pacman/pkg/
+mkdir -p $PACMAN_CACHE
+
 unpack() {
   echo -n "$1 "
   # Grab the first occurrence for each package
   local PACKAGE_NAME=`echo "$INDEX" | sed -n "/href=\"$1-[0-9]/{p;q;}" | sed -n "s/.*href=\"\([^\"]*\).*/\1/p"`
   [ -z "$PACKAGE_NAME" ] && echo "Error: package not found: $PACKAGE" && return 1
   local URL="$MIRROR$PACKAGE_NAME"
-  case "$URL" in
-    *.xz) curl -s "$URL" | xz -dc | sudo tar --warning=no-unknown-keyword -x;;
-    *.gz) curl -s "$URL" | sudo tar --warning=no-unknown-keyword -xz;;
-    *) echo "Error: unknown package format: $URL"
+  local OUTFILE="$PACMAN_CACHE$PACKAGE_NAME"
+  wget -q -O $OUTFILE "$URL"
+  case "$PACKAGE_NAME" in
+    *.xz) cat "$OUTFILE" | xz -dc | tar --warning=no-unknown-keyword -x;;
+    *.gz) cat "$OUTFILE" | tar --warning=no-unknown-keyword -xz;;
+    *) echo "Error: unknown package format: $PACKAGE_NAME"
        return 1;;
   esac
 }
