@@ -11,9 +11,9 @@ Switch your device to developer mode and run the following:
 curl https://raw.github.com/gsf/archrome/master/install.sh | sudo sh
 ```
 
-You should feel free to inspect [install.sh](/gsf/archrome/blob/master/install.sh)
-before you run it locally, of course. Note that the default mirror and directory
-can be overridden by environment variables.
+You should feel free to inspect [install.sh](/install.sh) before you run it
+locally, of course. Note that the default mirror and directory can be
+overridden by environment variables.
 
 Usage
 -----
