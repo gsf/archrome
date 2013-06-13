@@ -5,10 +5,12 @@ set -e
 # Default mirror and chroot directory
 MIRROR="http://us.mirror.archlinuxarm.org/armv7h/core/"
 DIR="arch"
+LOCALE="en_US.UTF-8"
 
 # Environment variable overrides
 [ -n "$ARCHMIRROR" ] && MIRROR="$ARCHMIRROR"
 [ -n "$ARCHROOT" ] && DIR="$ARCHROOT"
+[ -n "$ARCHLOCALE" ] && LOCALE="$ARCHLOCALE"
 
 DIRPATH="/usr/local/chroots/$DIR"
 mkdir -p "$DIRPATH"
@@ -28,6 +30,7 @@ PACKAGES="
   glibc
   gpgme
   grep
+  gzip
   iana-etc
   libarchive
   libassuan
@@ -41,6 +44,7 @@ PACKAGES="
   pacman-mirrorlist
   pcre
   readline
+  sed
   tar
   util-linux
   xz
@@ -48,12 +52,12 @@ PACKAGES="
 "
 
 # Grab index of packages, reversing so we'll get latest version with first match
-INDEX=`curl -s $MIRROR | tac`
+INDEX=`curl -sS $MIRROR | tac`
 
 PACMAN_CACHE=var/cache/pacman/pkg/
 mkdir -p $PACMAN_CACHE
 
-echo "Downloading and bootstrapping packages for bash and pacman..."
+echo "Unpacking packages into $DIRPATH..."
 for PACKAGE in $PACKAGES; do
   echo -n "$PACKAGE "
   # Grab the first occurrence for each package
@@ -62,7 +66,7 @@ for PACKAGE in $PACKAGES; do
   local URL="$MIRROR$PACKAGE_NAME"
   local CACHED="$PACMAN_CACHE$PACKAGE_NAME"
   # Move the cache into place before running install to reuse downloaded packages
-  [ ! -f "$CACHED" ] && curl "$URL" > "$CACHED"
+  [ ! -f "$CACHED" ] && curl -s "$URL" > "$CACHED"
   case "$PACKAGE_NAME" in
     *.xz) cat "$CACHED" | xz -dc | tar --warning=no-unknown-keyword -x;;
     *.gz) cat "$CACHED" | tar --warning=no-unknown-keyword -xz;;
@@ -74,18 +78,22 @@ done
 # Use host resolv.conf
 [ -f /etc/resolv.conf ] && cp /etc/resolv.conf etc/
 
-# Create Downloads directory for sharing with host
+# Create directories to share with host
 mkdir -p root/Downloads
+mkdir -p media
 
 # Mounts for pacman preparations
-mount -t proc proc proc
-mount -t sysfs sys sys
-mount -o bind /dev dev
-mount -t devpts pts dev/pts
+mountpoint -q proc || mount -t proc proc proc
+mountpoint -q sys || mount -t sysfs sys sys
+mountpoint -q dev || mount -B /dev dev
+mountpoint -q dev/pts || mount -t devpts pts dev/pts
 
-echo "\nUpdating pacman db with bootstrapped packages..."
-chroot . pacman -Sy $PACKAGES -dd --dbonly --noconfirm
+echo "\nUpdating pacman db with unpacked packages..."
+chroot . pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
 
+echo "Setting default ($LOCALE) locale..."
+sed -i "s/#\($LOCALE.*\)/\1/" etc/locale.gen
+chroot . locale-gen
 
 # Write chroot wrapper script
 echo "Writing /usr/local/bin/archrome..."
@@ -99,9 +107,11 @@ cd "/usr/local/chroots/$DIR"
 # Create mount points if they don't exist already
 mountpoint -q proc || mount -t proc proc proc
 mountpoint -q sys || mount -t sysfs sys sys
-mountpoint -q dev || mount -o bind /dev dev
+mountpoint -q dev || mount -B /dev dev
 mountpoint -q dev/pts || mount -t devpts pts dev/pts
-mountpoint -q root/Downloads || mount -o bind /home/chronos/user/Downloads root/Downloads
+mountpoint -q root/Downloads || mount -B /home/chronos/user/Downloads root/Downloads
+mount --make-shared /media
+mountpoint -q media || mount -R /media media
 
 chroot .
 EOF
