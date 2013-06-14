@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# archrome - Arch Linux chroot for Chrome OS
+# https://github.com/gsf/archrome
+# Version 0.0.1
 
 set -e
 
