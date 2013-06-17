@@ -22,9 +22,10 @@ to build a system.
 Usage
 -----
 Enter the chroot with the newly-installed `archrome` script, which wraps the
-`chroot` command to handle the mounting of various directories. Enter a chroot
-other than the default ("arch") by passing it as an argument:
+`chroot` command to handle the mounting of various directories.  If a command
+is passed to `archrome`, it will be executed in the chroot instead of the
+usual `/bin/bash`. For example:
 ```
-sudo archrome myarch
+sudo archrome /bin/sshd
 ```
 
