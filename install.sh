@@ -79,25 +79,17 @@ for PACKAGE in $PACKAGES; do
   esac
 done
 
+# Switch from /proc/mounts to boring mtab
+[ -e etc/mtab ] && rm etc/mtab
+echo "rootfs / rootfs rw 0 0" > etc/mtab
+
 # Use host resolv.conf
-[ -f /etc/resolv.conf ] && cp /etc/resolv.conf etc/
+ln -sf /var/host/shill/resolv.conf etc/resolv.conf
 
 # Create directories to share with host
-mkdir -p root/Downloads
-mkdir -p media
-
-# Mounts for pacman preparations
-mountpoint -q proc || mount -t proc proc proc
-mountpoint -q sys || mount -t sysfs sys sys
-mountpoint -q dev || mount -B /dev dev
-mountpoint -q dev/pts || mount -t devpts pts dev/pts
-
-echo "\nUpdating pacman db with unpacked packages..."
-chroot . pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
-
-echo "Setting default ($LOCALE) locale..."
-sed -i "s/#\($LOCALE.*\)/\1/" etc/locale.gen
-chroot . locale-gen
+mkdir -p var/host/Downloads
+mkdir -p var/host/media
+mkdir -p var/host/shill
 
 # Write chroot wrapper script
 echo "Writing /usr/local/bin/archrome..."
@@ -105,7 +97,7 @@ cat <<'EOF' > /usr/local/bin/archrome
 #!/bin/sh
 
 DIR="arch"
-[ -n "$1" ] && DIR="$1"
+[ -n "$ARCHROOT" ] && DIR="$ARCHROOT"
 cd "/usr/local/chroots/$DIR"
 
 # Create mount points if they don't exist already
@@ -113,10 +105,19 @@ mountpoint -q proc || mount -t proc proc proc
 mountpoint -q sys || mount -t sysfs sys sys
 mountpoint -q dev || mount -B /dev dev
 mountpoint -q dev/pts || mount -t devpts pts dev/pts
-mountpoint -q root/Downloads || mount -B /home/chronos/user/Downloads root/Downloads
+mountpoint -q var/host/Downloads || mount -B /home/chronos/user/Downloads var/host/Downloads
 mount --make-shared /media
-mountpoint -q media || mount -R /media media
+mountpoint -q var/host/media || mount -R /media var/host/media
+mountpoint -q var/host/shill || mount -B /var/run/shill var/host/shill
 
-chroot .
+chroot . "$@"
 EOF
 chmod 755 /usr/local/bin/archrome
+
+# A bit of preparation
+echo "\nUpdating pacman db with unpacked packages..."
+/usr/local/bin/archrome pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
+
+echo "Setting default ($LOCALE) locale..."
+sed -i "s/#\($LOCALE.*\)/\1/" etc/locale.gen
+/usr/local/bin/archrome locale-gen
