@@ -15,8 +15,8 @@ You should feel free to inspect [install.sh](/install.sh) before you run it
 locally, of course. Note that some defaults can be overridden by environment
 variables.
 
-When the script finishes, you will have a chroot with the minimal base needed
-to build a system.
+When the script finishes, you will have a chroot with a minimal base for
+building a system.
 
 
 Usage
