@@ -1,11 +1,9 @@
-archrome
-========
+# archrome
 
 Arch Linux chroot for Chrome OS
 
 
-Install
--------
+## Install
 Switch your device to developer mode and run the following:
 ```
 curl https://raw.github.com/gsf/archrome/master/install.sh | sudo sh
@@ -19,8 +17,7 @@ When the script finishes, you will have a chroot with a minimal base for
 building a system.
 
 
-Usage
------
+## Usage
 Enter the chroot with the newly-installed `archrome` script, which wraps the
 `chroot` command to handle the mounting of various directories.  If a command
 is passed to `archrome`, it will be executed in the chroot instead of the
@@ -29,3 +26,6 @@ usual `/bin/bash`. For example:
 sudo archrome /bin/sshd
 ```
 
+## Cleanup
+Unmount things before a chroot `rm -rf`! A `grep chroot /etc/mtab` or two will
+help.
