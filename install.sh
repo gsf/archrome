@@ -7,12 +7,19 @@
 set -e
 
 # Default mirror and chroot directory
-MIRROR="http://us.mirror.archlinuxarm.org/armv7h/core/"
+MIRROR='http://mirrors.kernel.org/archlinux/$repo/os/$arch/'
+ARCH="x86_64"
 DIR="arch"
 LOCALE="en_US.UTF-8"
 
 # Environment variable overrides
+#
+# Example values for ARM-based devices:
+# ARCHMIRROR='http://mirror.archlinuxarm.org/$arch/$repo/'
+# ARCHARCH='armv7h'
+#
 [ -n "$ARCHMIRROR" ] && MIRROR="$ARCHMIRROR"
+[ -n "$ARCHARCH" ] && ARCH="$ARCHARCH"
 [ -n "$ARCHROOT" ] && DIR="$ARCHROOT"
 [ -n "$ARCHLOCALE" ] && LOCALE="$ARCHLOCALE"
 
@@ -28,6 +35,7 @@ PACKAGES="
   bzip2
   coreutils
   curl
+  e2fsprogs
   expat
   filesystem
   gcc-libs
@@ -36,6 +44,8 @@ PACKAGES="
   grep
   gzip
   iana-etc
+  keyutils
+  krb5
   libarchive
   libassuan
   libcap
@@ -55,8 +65,11 @@ PACKAGES="
   zlib
 "
 
+# Set package URL based on mirror and arch
+PACKAGE_URL=`arch=$ARCH repo=core eval echo $MIRROR`
+
 # Grab index of packages, reversing so we'll get latest version with first match
-INDEX=`curl -sS $MIRROR | tac`
+INDEX=`curl -sS $PACKAGE_URL | tac`
 
 PACMAN_CACHE=var/cache/pacman/pkg/
 mkdir -p $PACMAN_CACHE
@@ -65,9 +78,9 @@ echo "Unpacking packages into $DIRPATH..."
 for PACKAGE in $PACKAGES; do
   echo -n "$PACKAGE "
   # Grab the first occurrence for each package
-  local PACKAGE_NAME=`echo "$INDEX" | sed -n "/href=\"$PACKAGE-[0-9]/{p;q;}" | sed -n "s/.*href=\"\([^\"]*\).*/\1/p"`
+  local PACKAGE_NAME=`echo "$INDEX" | sed -n "/href=\"$PACKAGE-[0-9].*z\"/{p;q;}" | sed -n "s/.*href=\"\([^\"]*\).*/\1/p"`
   [ -z "$PACKAGE_NAME" ] && echo "Error: package not found: $PACKAGE" && return 1
-  local URL="$MIRROR$PACKAGE_NAME"
+  local URL="$PACKAGE_URL$PACKAGE_NAME"
   local CACHED="$PACMAN_CACHE$PACKAGE_NAME"
   # Move the cache into place before running install to reuse downloaded packages
   [ ! -f "$CACHED" ] && curl -s "$URL" > "$CACHED"
@@ -78,6 +91,7 @@ for PACKAGE in $PACKAGES; do
        return 1;;
   esac
 done
+echo
 
 # Switch from /proc/mounts to boring mtab
 [ -e etc/mtab ] && rm etc/mtab
@@ -93,6 +107,7 @@ mkdir -p var/host/shill
 
 # Write chroot wrapper script
 echo "Writing /usr/local/bin/archrome..."
+mkdir -p /usr/local/bin
 cat <<'EOF' > /usr/local/bin/archrome
 #!/bin/sh
 
@@ -104,7 +119,7 @@ cd "/usr/local/chroots/$DIR"
 mountpoint -q proc || mount -t proc proc proc
 mountpoint -q sys || mount -t sysfs sys sys
 mountpoint -q dev || mount -B /dev dev
-mountpoint -q dev/pts || mount -t devpts pts dev/pts
+mountpoint -q dev/pts || mount -o gid=5 -t devpts pts dev/pts
 mountpoint -q var/host/Downloads || mount -B /home/chronos/user/Downloads var/host/Downloads
 mount --make-shared /media
 mountpoint -q var/host/media || mount -R /media var/host/media
@@ -115,7 +130,10 @@ EOF
 chmod 755 /usr/local/bin/archrome
 
 # A bit of preparation
-echo "\nUpdating pacman db with unpacked packages..."
+echo "Updating pacman db with unpacked packages..."
+echo "Server = $MIRROR" >> etc/pacman.d/mirrorlist
+# For speed and ease forget about package signing
+sed -i "s/^SigLevel.*$/SigLevel = Never/" etc/pacman.conf
 /usr/local/bin/archrome pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
 
 echo "Setting default ($LOCALE) locale..."
