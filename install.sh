@@ -10,7 +10,6 @@ set -e
 MIRROR='http://mirrors.kernel.org/archlinux/$repo/os/$arch/'
 ARCH="x86_64"
 DIR="arch"
-LOCALE="en_US.UTF-8"
 
 # Environment variable overrides
 #
@@ -21,7 +20,6 @@ LOCALE="en_US.UTF-8"
 [ -n "$ARCHMIRROR" ] && MIRROR="$ARCHMIRROR"
 [ -n "$ARCHARCH" ] && ARCH="$ARCHARCH"
 [ -n "$ARCHROOT" ] && DIR="$ARCHROOT"
-[ -n "$ARCHLOCALE" ] && LOCALE="$ARCHLOCALE"
 
 DIRPATH="/usr/local/chroots/$DIR"
 mkdir -p "$DIRPATH"
@@ -135,7 +133,3 @@ echo "Server = $MIRROR" >> etc/pacman.d/mirrorlist
 # For speed and ease forget about package signing
 sed -i "s/^SigLevel.*$/SigLevel = Never/" etc/pacman.conf
 /usr/local/bin/archrome pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
-
-echo "Setting default ($LOCALE) locale..."
-sed -i "s/#\($LOCALE.*\)/\1/" etc/locale.gen
-/usr/local/bin/archrome locale-gen
