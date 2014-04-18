@@ -41,7 +41,22 @@ To set up an SSH server, run the following in the chroot:
 
 Start it up with `/bin/sshd` or from outside the chroot with `sudo archrome /bin/sshd`.
 
+### Package signing
+Arch package signing has been disabled because the generating of the master key takes
+a significant amount of time during installation. Also, that level of security seems
+unwarranted for a chroot on a chromebook.
+
+To enable package signing, complete the following steps:
+
+1. Install `archlinux-keyring`
+1. Run `pacman-key --init`
+1. Run `pacman-key --populate archlinux`
+1. Delete or comment out the `SigLevel = Never` line in /etc/pacman.conf
+
 
 ## Cleanup
 Remember to unmount things before running `rm -rf` on a chroot! A
-`grep chroot /etc/mtab` or two will help.
+`grep chroot /etc/mtab` or two will help, as will this:
+```
+sudo umount /usr/local/chroots/arch/{proc,sys,dev/pts,dev,var/host/media,var/host/shill,var/host/Downloads}
+```
