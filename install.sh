@@ -128,8 +128,11 @@ EOF
 chmod 755 /usr/local/bin/archrome
 
 # A bit of preparation
-echo "Updating pacman db with unpacked packages..."
+echo "Updating pacman db with manually unpacked packages..."
 echo "Server = $MIRROR" >> etc/pacman.d/mirrorlist
 # For speed and ease forget about package signing
-sed -i "s/^SigLevel.*$/SigLevel = Never/" etc/pacman.conf
-/usr/local/bin/archrome pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed
+sed -i "/^SigLevel/a SigLevel = Never" etc/pacman.conf
+/usr/local/bin/archrome pacman -Sy $PACKAGES -dd --dbonly --noconfirm --needed > /dev/null
+
+# Finish line
+echo "Chroot installed in /usr/local/chroots/$DIR. Enter with 'sudo archrome'."
